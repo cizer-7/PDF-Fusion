@@ -1,0 +1,5 @@
+{
+  "name": "PDF Fusion",
+  "description": "A minimalist and simple application to merge multiple PDF documents. Users can select PDF files, reorder them using drag-and-drop, and specify a name for the final merged document.",
+  "requestFramePermissions": []
+}
