@@ -3,6 +3,12 @@ import { PdfIcon, UploadIcon, DragHandleIcon, TrashIcon, XCircleIcon, LoaderIcon
 
 // pdf-lib is loaded from CDN, declare it for TypeScript
 declare const PDFLib: any;
+// File System Access API types for window
+declare global {
+  interface Window {
+    showSaveFilePicker: (options?: any) => Promise<any>;
+  }
+}
 
 interface AppFile {
   id: string;
@@ -21,6 +27,8 @@ const App: React.FC = () => {
 
   const draggedItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
+  
+  const canShowSavePicker = 'showSaveFilePicker' in window;
 
   const convertImageToPdf = async (imageFile: File): Promise<File> => {
     const { PDFDocument } = PDFLib;
@@ -166,9 +174,30 @@ const App: React.FC = () => {
       setFileNameSourceId(null); // Uncheck any selected checkbox
     }
   };
+
+  const createMergedPdfBlob = async (pdfFiles: AppFile[]): Promise<Blob> => {
+    const { PDFDocument } = PDFLib;
+    const mergedPdf = await PDFDocument.create();
+
+    for (const appFile of pdfFiles) {
+      const arrayBuffer = await appFile.file.arrayBuffer();
+      const pdf = await PDFDocument.load(arrayBuffer);
+      const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+      copiedPages.forEach((page) => {
+        mergedPdf.addPage(page);
+      });
+    }
+
+    const mergedPdfBytes = await mergedPdf.save();
+    return new Blob([mergedPdfBytes], { type: 'application/pdf' });
+  };
   
-  const handleMerge = useCallback(async () => {
-    if (files.length < 2 && !files.some(f => f.type !== 'pdf')) {
+  const runMergeProcess = async (saveMethod: 'download' | 'saveAs') => {
+     if (files.length === 0) {
+      setError("Por favor, seleccione al menos un archivo para crear un PDF.");
+      return;
+    }
+    if (files.length < 2 && files.every(f => f.type === 'pdf')) {
       setError("Por favor, seleccione al menos dos archivos PDF para fusionar.");
       return;
     }
@@ -184,22 +213,9 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-      const { PDFDocument } = PDFLib;
-      const mergedPdf = await PDFDocument.create();
-
-      for (const appFile of files) {
-        const arrayBuffer = await appFile.file.arrayBuffer();
-        const pdf = await PDFDocument.load(arrayBuffer);
-        const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-        copiedPages.forEach((page) => {
-          mergedPdf.addPage(page);
-        });
-      }
-
-      const mergedPdfBytes = await mergedPdf.save();
-      const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
+      const pdfFiles = files.filter(f => f.type === 'pdf');
+      const blob = await createMergedPdfBlob(pdfFiles);
+      
       let finalName = mergedFileName.trim();
       if (!finalName) {
           finalName = 'merged-document.pdf';
@@ -207,22 +223,42 @@ const App: React.FC = () => {
       if (!finalName.toLowerCase().endsWith('.pdf')) {
           finalName += '.pdf';
       }
-      link.download = finalName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
+
+      if (saveMethod === 'saveAs' && canShowSavePicker) {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: finalName,
+          types: [{
+            description: 'PDF Documents',
+            accept: { 'application/pdf': ['.pdf'] },
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+      } else {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = finalName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+      }
       
       setFiles([]);
       setFileNameSourceId(null);
       setMergedFileName('merged-document.pdf');
-    } catch (e) {
-      console.error(e);
-      setError("Ocurrió un error al fusionar los archivos PDF. Asegúrese de que no estén corruptos o protegidos con contraseña.");
+    } catch (e: any) {
+        // Don't show an error if the user cancels the save dialog
+        if (e.name === 'AbortError') {
+          return;
+        }
+        console.error(e);
+        setError("Ocurrió un error al fusionar los archivos. Asegúrese de que no estén corruptos o protegidos.");
     } finally {
       setIsMerging(false);
     }
-  }, [files, mergedFileName]);
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center p-4 sm:p-6 lg:p-8 font-sans text-white">
@@ -310,15 +346,31 @@ const App: React.FC = () => {
                 />
               </div>
 
-              <div className="mt-6 border-t border-slate-700 pt-6">
+              <div className="mt-6 border-t border-slate-700 pt-6 flex flex-col sm:flex-row gap-4">
+                {canShowSavePicker && (
+                  <button
+                    onClick={() => runMergeProcess('saveAs')}
+                    disabled={isMerging}
+                    className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0F4C81] focus:ring-indigo-500 disabled:bg-indigo-800 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isMerging ? (
+                      <>
+                        <LoaderIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+                        Guardando...
+                      </>
+                    ) : (
+                      'Fusionar y guardar en...'
+                    )}
+                  </button>
+                )}
                 <button
-                  onClick={handleMerge}
+                  onClick={() => runMergeProcess('download')}
                   disabled={isMerging}
-                  className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0F4C81] focus:ring-indigo-500 disabled:bg-indigo-800 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
+                  className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md shadow-sm transition-colors text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0F4C81] focus:ring-green-500 disabled:bg-green-900 disabled:text-slate-400 disabled:cursor-not-allowed"
                 >
                   {isMerging ? (
                     <>
-                      <LoaderIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+                      <LoaderIcon className="animate-spin -ml-1 mr-3 h-5 w-5" />
                       Fusionando...
                     </>
                   ) : (
