@@ -1,6 +1,5 @@
-
 import React, { useState, useRef, useCallback } from 'react';
-import { PdfIcon, UploadIcon, DragHandleIcon, TrashIcon, CheckCircleIcon, XCircleIcon, LoaderIcon } from './components/Icons';
+import { PdfIcon, UploadIcon, DragHandleIcon, TrashIcon, XCircleIcon, LoaderIcon } from './components/Icons';
 
 // pdf-lib is loaded from CDN, declare it for TypeScript
 declare const PDFLib: any;
@@ -16,6 +15,7 @@ const App: React.FC = () => {
   const [isMerging, setIsMerging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [fileNameSourceId, setFileNameSourceId] = useState<string | null>(null);
 
   const draggedItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
@@ -29,7 +29,6 @@ const App: React.FC = () => {
       setFiles(prevFiles => [...prevFiles, ...newFiles]);
       setError(null);
     }
-    // Reset file input to allow selecting the same file again
     event.target.value = '';
   };
 
@@ -57,8 +56,12 @@ const App: React.FC = () => {
     }
   };
 
-  const removeFile = (index: number) => {
-    setFiles(files.filter((_, i) => i !== index));
+  const removeFile = (idToRemove: string) => {
+    if (idToRemove === fileNameSourceId) {
+        setFileNameSourceId(null);
+        setMergedFileName('merged-document.pdf');
+    }
+    setFiles(files.filter((file) => file.id !== idToRemove));
   };
 
   const handleSort = () => {
@@ -70,6 +73,25 @@ const App: React.FC = () => {
     draggedItem.current = null;
     dragOverItem.current = null;
     setFiles(filesClone);
+  };
+
+  const handleFileNameSourceChange = (selectedFile: PDFFile) => {
+    if (fileNameSourceId === selectedFile.id) {
+      // Unchecking the current selection
+      setFileNameSourceId(null);
+      setMergedFileName('merged-document.pdf');
+    } else {
+      // Checking a new file
+      setFileNameSourceId(selectedFile.id);
+      setMergedFileName(selectedFile.file.name);
+    }
+  };
+
+  const handleCustomFileNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMergedFileName(e.target.value);
+    if (fileNameSourceId) {
+      setFileNameSourceId(null); // Uncheck any selected checkbox
+    }
   };
   
   const handleMerge = useCallback(async () => {
@@ -98,15 +120,22 @@ const App: React.FC = () => {
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       let finalName = mergedFileName.trim();
+      if (!finalName) {
+          finalName = 'merged-document.pdf';
+      }
       if (!finalName.toLowerCase().endsWith('.pdf')) {
           finalName += '.pdf';
       }
-      link.download = finalName || 'merged-document.pdf';
+      link.download = finalName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(link.href);
-      setFiles([]); // Clear files after successful merge
+      
+      // Reset state after merge
+      setFiles([]);
+      setFileNameSourceId(null);
+      setMergedFileName('merged-document.pdf');
     } catch (e) {
       console.error(e);
       setError("Ocurrió un error al fusionar los archivos PDF. Asegúrese de que no estén corruptos o protegidos con contraseña.");
@@ -151,7 +180,7 @@ const App: React.FC = () => {
           {files.length > 0 && (
             <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
               <h2 className="text-lg font-semibold text-slate-700 mb-4">Archivos seleccionados ({files.length})</h2>
-              <p className="text-sm text-slate-500 mb-4">Arrastre y suelte para reordenar los archivos.</p>
+              <p className="text-sm text-slate-500 mb-4">Arrastre para reordenar. Marque una casilla para usar un nombre de archivo existente.</p>
               <ul className="space-y-3">
                 {files.map((pdfFile, index) => (
                   <li
@@ -164,9 +193,16 @@ const App: React.FC = () => {
                     onDragOver={(e) => e.preventDefault()}
                   >
                     <DragHandleIcon className="w-5 h-5 text-slate-400 mr-3 shrink-0" />
+                    <input
+                      type="checkbox"
+                      checked={pdfFile.id === fileNameSourceId}
+                      onChange={() => handleFileNameSourceChange(pdfFile)}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mr-3 shrink-0 cursor-pointer"
+                      title="Usar este nombre para el archivo fusionado"
+                    />
                     <PdfIcon className="w-6 h-6 text-red-500 mr-3 shrink-0" />
                     <span className="flex-grow text-slate-800 text-sm truncate" title={pdfFile.file.name}>{pdfFile.file.name}</span>
-                    <button onClick={() => removeFile(index)} className="ml-4 p-1 rounded-full hover:bg-red-100 transition-colors">
+                    <button onClick={() => removeFile(pdfFile.id)} className="ml-4 p-1 rounded-full hover:bg-red-100 transition-colors">
                       <TrashIcon className="w-5 h-5 text-slate-500 hover:text-red-600" />
                     </button>
                   </li>
@@ -181,7 +217,7 @@ const App: React.FC = () => {
                   type="text"
                   id="merged-filename"
                   value={mergedFileName}
-                  onChange={(e) => setMergedFileName(e.target.value)}
+                  onChange={handleCustomFileNameChange}
                   className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   placeholder="ej: mi-documento-fusionado.pdf"
                 />
