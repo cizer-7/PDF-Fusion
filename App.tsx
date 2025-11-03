@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { PdfIcon, UploadIcon, DragHandleIcon, TrashIcon, XCircleIcon, LoaderIcon, WordIcon, ExcelIcon } from './components/Icons';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { PdfIcon, UploadIcon, DragHandleIcon, TrashIcon, XCircleIcon, LoaderIcon, WordIcon, ExcelIcon, PreviewIcon } from './components/Icons';
 
 // pdf-lib is loaded from CDN, declare it for TypeScript
 declare const PDFLib: any;
@@ -16,6 +16,50 @@ interface AppFile {
   type: 'pdf' | 'word' | 'excel';
 }
 
+interface PreviewModalProps {
+  file: AppFile;
+  onClose: () => void;
+}
+
+const PreviewModal: React.FC<PreviewModalProps> = ({ file, onClose }) => {
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (file && file.type === 'pdf') {
+      const url = URL.createObjectURL(file.file);
+      setFileUrl(url);
+
+      return () => {
+        URL.revokeObjectURL(url);
+        setFileUrl(null);
+      };
+    }
+  }, [file]);
+
+  if (!file || !fileUrl) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-[#1E5A90] rounded-lg shadow-xl w-full max-w-4xl h-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <header className="p-4 border-b border-slate-700 flex justify-between items-center shrink-0">
+          <h3 className="text-lg font-semibold text-white truncate" title={file.file.name}>{file.file.name}</h3>
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-white/10 transition-colors">
+            <XCircleIcon className="w-8 h-8 text-slate-300 hover:text-white" />
+          </button>
+        </header>
+        <div className="flex-grow p-2 h-0">
+          <iframe
+            src={fileUrl}
+            className="w-full h-full border-0 rounded-b-md"
+            title={`Preview of ${file.file.name}`}
+          ></iframe>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 const App: React.FC = () => {
   const [files, setFiles] = useState<AppFile[]>([]);
   const [mergedFileName, setMergedFileName] = useState('merged-document.pdf');
@@ -24,11 +68,22 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [fileNameSourceId, setFileNameSourceId] = useState<string | null>(null);
+  const [previewFile, setPreviewFile] = useState<AppFile | null>(null);
 
   const draggedItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   
   const canShowSavePicker = 'showSaveFilePicker' in window;
+
+  const handlePreview = (fileToPreview: AppFile) => {
+    if (fileToPreview.type === 'pdf') {
+        setPreviewFile(fileToPreview);
+    }
+  };
+
+  const handleClosePreview = () => {
+      setPreviewFile(null);
+  };
 
   const convertImageToPdf = async (imageFile: File): Promise<File> => {
     const { PDFDocument } = PDFLib;
@@ -325,8 +380,16 @@ const App: React.FC = () => {
                     {appFile.type === 'word' && <WordIcon className="w-6 h-6 text-blue-400 mr-3 shrink-0" />}
                     {appFile.type === 'excel' && <ExcelIcon className="w-6 h-6 text-green-400 mr-3 shrink-0" />}
                     <span className="flex-grow text-slate-100 text-sm truncate" title={appFile.file.name}>{appFile.file.name}</span>
-                    <button onClick={() => removeFile(appFile.id)} className="ml-4 p-1 rounded-full hover:bg-red-500/10 transition-colors">
-                      <TrashIcon className="w-5 h-5 text-slate-400 hover:text-red-400" />
+                    <button
+                        onClick={() => handlePreview(appFile)}
+                        disabled={appFile.type !== 'pdf'}
+                        className="ml-4 p-1 rounded-full text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:text-slate-600 disabled:hover:text-slate-600 disabled:hover:bg-transparent"
+                        title={appFile.type === 'pdf' ? 'Previsualizar archivo' : 'La previsualización no está disponible'}
+                    >
+                        <PreviewIcon className="w-5 h-5"/>
+                    </button>
+                    <button onClick={() => removeFile(appFile.id)} className="ml-2 p-1 rounded-full text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+                        <TrashIcon className="w-5 h-5" />
                     </button>
                   </li>
                 ))}
@@ -381,6 +444,7 @@ const App: React.FC = () => {
             </div>
           )}
         </main>
+        {previewFile && <PreviewModal file={previewFile} onClose={handleClosePreview} />}
       </div>
     </div>
   );
