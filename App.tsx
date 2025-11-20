@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { PdfIcon, UploadIcon, DragHandleIcon, TrashIcon, XCircleIcon, LoaderIcon, WordIcon, ExcelIcon, PreviewIcon } from './components/Icons';
 
@@ -103,7 +103,8 @@ const App: React.FC = () => {
   
     const pdfBytes = await pdfDoc.save();
     const originalName = imageFile.name.substring(0, imageFile.name.lastIndexOf('.')) || imageFile.name;
-    return new File([pdfBytes], `${originalName}.pdf`, { type: 'application/pdf' });
+    // TypeScript casting fix for build error
+    return new File([pdfBytes as any], `${originalName}.pdf`, { type: 'application/pdf' });
   };
 
   const processAndAddFiles = async (filesToAdd: FileList) => {
@@ -241,7 +242,8 @@ const App: React.FC = () => {
     }
 
     const mergedPdfBytes = await mergedPdf.save();
-    return new Blob([mergedPdfBytes], { type: 'application/pdf' });
+    // TypeScript casting fix for build error
+    return new Blob([mergedPdfBytes as any], { type: 'application/pdf' });
   };
   
   const runMergeProcess = async (saveMethod: 'download' | 'saveAs') => {
