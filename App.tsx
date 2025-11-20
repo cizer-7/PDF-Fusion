@@ -1,8 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { PDFDocument } from 'pdf-lib';
 import { PdfIcon, UploadIcon, DragHandleIcon, TrashIcon, XCircleIcon, LoaderIcon, WordIcon, ExcelIcon, PreviewIcon } from './components/Icons';
 
-// pdf-lib is loaded from CDN, declare it for TypeScript
-declare const PDFLib: any;
 // File System Access API types for window
 declare global {
   interface Window {
@@ -86,7 +85,6 @@ const App: React.FC = () => {
   };
 
   const convertImageToPdf = async (imageFile: File): Promise<File> => {
-    const { PDFDocument } = PDFLib;
     const imageBytes = await imageFile.arrayBuffer();
     const pdfDoc = await PDFDocument.create();
     
@@ -231,7 +229,6 @@ const App: React.FC = () => {
   };
 
   const createMergedPdfBlob = async (pdfFiles: AppFile[]): Promise<Blob> => {
-    const { PDFDocument } = PDFLib;
     const mergedPdf = await PDFDocument.create();
 
     for (const appFile of pdfFiles) {
