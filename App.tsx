@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { PdfIcon, UploadIcon, DragHandleIcon, TrashIcon, XCircleIcon, LoaderIcon, WordIcon, ExcelIcon, PreviewIcon } from './components/Icons';
+import logo from './assets/logo.jpg';
 
 // File System Access API types for window
 declare global {
@@ -68,26 +69,78 @@ const App: React.FC = () => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [fileNameSourceId, setFileNameSourceId] = useState<string | null>(null);
   const [previewFile, setPreviewFile] = useState<AppFile | null>(null);
+  const [isCompressionEnabled, setIsCompressionEnabled] = useState(true);
 
   const draggedItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
-  
+
   const canShowSavePicker = 'showSaveFilePicker' in window;
 
   const handlePreview = (fileToPreview: AppFile) => {
     if (fileToPreview.type === 'pdf') {
-        setPreviewFile(fileToPreview);
+      setPreviewFile(fileToPreview);
     }
   };
 
   const handleClosePreview = () => {
-      setPreviewFile(null);
+    setPreviewFile(null);
+  };
+
+  const compressImage = async (imageFile: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = URL.createObjectURL(imageFile);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Optional: Max dimension constraint (e.g., 2000px) to further reduce size
+        const MAX_DIMENSION = 2000;
+        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+          if (width > height) {
+            height = (height * MAX_DIMENSION) / width;
+            width = MAX_DIMENSION;
+          } else {
+            width = (width * MAX_DIMENSION) / height;
+            height = MAX_DIMENSION;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          URL.revokeObjectURL(img.src);
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          URL.revokeObjectURL(img.src);
+          if (blob) {
+            const compressedFile = new File([blob], imageFile.name, {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          } else {
+            reject(new Error('Compression failed'));
+          }
+        }, 'image/jpeg', 0.7); // 0.7 quality
+      };
+      img.onerror = (error) => {
+        URL.revokeObjectURL(img.src);
+        reject(error);
+      };
+    });
   };
 
   const convertImageToPdf = async (imageFile: File): Promise<File> => {
     const imageBytes = await imageFile.arrayBuffer();
     const pdfDoc = await PDFDocument.create();
-    
+
     let image;
     if (imageFile.type === 'image/jpeg') {
       image = await pdfDoc.embedJpg(imageBytes);
@@ -96,11 +149,11 @@ const App: React.FC = () => {
     } else {
       throw new Error('Unsupported image type for conversion.');
     }
-  
+
     const { width, height } = image.scale(1);
     const page = pdfDoc.addPage([width, height]);
     page.drawImage(image, { x: 0, y: 0, width, height });
-  
+
     const pdfBytes = await pdfDoc.save();
     const originalName = imageFile.name.substring(0, imageFile.name.lastIndexOf('.')) || imageFile.name;
     // TypeScript casting fix for build error
@@ -111,54 +164,62 @@ const App: React.FC = () => {
     setIsProcessing(true);
     setError(null);
     const allowedTypes = [
-        'application/pdf', 
-        'image/jpeg', 
-        'image/png',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      'application/pdf',
+      'image/jpeg',
+      'image/png',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     ];
-    
-    const validFiles = Array.from(filesToAdd).filter(file => 
-        allowedTypes.includes(file.type) || 
-        file.name.endsWith('.doc') || file.name.endsWith('.docx') ||
-        file.name.endsWith('.xls') || file.name.endsWith('.xlsx') ||
-        file.name.endsWith('.pdf') || file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png')
+
+    const validFiles = Array.from(filesToAdd).filter(file =>
+      allowedTypes.includes(file.type) ||
+      file.name.endsWith('.doc') || file.name.endsWith('.docx') ||
+      file.name.endsWith('.xls') || file.name.endsWith('.xlsx') ||
+      file.name.endsWith('.pdf') || file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png')
     );
 
     if (validFiles.length === 0) {
-        setError("Ninguno de los archivos seleccionados es un formato válido (PDF, JPG, PNG).");
-        setIsProcessing(false);
-        return;
+      setError("Ninguno de los archivos seleccionados es un formato válido (PDF, JPG, PNG).");
+      setIsProcessing(false);
+      return;
     }
 
     try {
-        const processedFilesPromises = validFiles.map(async (file): Promise<AppFile> => {
-            let fileToProcess = file;
-            let fileType: AppFile['type'] = 'pdf';
+      const processedFilesPromises = validFiles.map(async (file): Promise<AppFile> => {
+        let fileToProcess = file;
+        let fileType: AppFile['type'] = 'pdf';
 
-            if (file.type === 'image/jpeg' || file.type === 'image/png') {
-                fileToProcess = await convertImageToPdf(file);
-                fileType = 'pdf';
-            } else if (file.type.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
-                fileType = 'word';
-            } else if (file.type.includes('excel') || file.type.includes('spreadsheet') || file.name.endsWith('.xls') || file.name.endsWith('.xlsx')) {
-                fileType = 'excel';
-            } else {
-                 fileType = 'pdf';
+        if (file.type === 'image/jpeg' || file.type === 'image/png') {
+          let imageToConvert = file;
+          if (isCompressionEnabled) {
+            try {
+              imageToConvert = await compressImage(file);
+            } catch (err) {
+              console.error("Compression failed, using original image", err);
             }
-            
-            return { id: `${file.name}-${file.lastModified}-${Math.random()}`, file: fileToProcess, type: fileType };
-        });
+          }
+          fileToProcess = await convertImageToPdf(imageToConvert);
+          fileType = 'pdf';
+        } else if (file.type.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
+          fileType = 'word';
+        } else if (file.type.includes('excel') || file.type.includes('spreadsheet') || file.name.endsWith('.xls') || file.name.endsWith('.xlsx')) {
+          fileType = 'excel';
+        } else {
+          fileType = 'pdf';
+        }
 
-        const newFiles = await Promise.all(processedFilesPromises);
-        setFiles(prevFiles => [...prevFiles, ...newFiles]);
+        return { id: `${file.name}-${file.lastModified}-${Math.random()}`, file: fileToProcess, type: fileType };
+      });
+
+      const newFiles = await Promise.all(processedFilesPromises);
+      setFiles(prevFiles => [...prevFiles, ...newFiles]);
     } catch (e) {
-        console.error(e);
-        setError("Ocurrió un error al procesar uno de los archivos.");
+      console.error(e);
+      setError("Ocurrió un error al procesar uno de los archivos.");
     } finally {
-        setIsProcessing(false);
+      setIsProcessing(false);
     }
   };
 
@@ -179,21 +240,21 @@ const App: React.FC = () => {
       setIsDragOver(false);
     }
   };
-  
+
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
     const droppedFiles = e.dataTransfer.files;
     if (droppedFiles && droppedFiles.length > 0) {
-       processAndAddFiles(droppedFiles);
+      processAndAddFiles(droppedFiles);
     }
   };
 
   const removeFile = (idToRemove: string) => {
     if (idToRemove === fileNameSourceId) {
-        setFileNameSourceId(null);
-        setMergedFileName('merged-document.pdf');
+      setFileNameSourceId(null);
+      setMergedFileName('merged-document.pdf');
     }
     setFiles(files.filter((file) => file.id !== idToRemove));
   };
@@ -245,9 +306,9 @@ const App: React.FC = () => {
     // TypeScript casting fix for build error
     return new Blob([mergedPdfBytes as any], { type: 'application/pdf' });
   };
-  
+
   const runMergeProcess = async (saveMethod: 'download' | 'saveAs') => {
-     if (files.length === 0) {
+    if (files.length === 0) {
       setError("Por favor, seleccione al menos un archivo para crear un PDF.");
       return;
     }
@@ -258,9 +319,9 @@ const App: React.FC = () => {
 
     const unsupportedFiles = files.filter(f => f.type === 'word' || f.type === 'excel');
     if (unsupportedFiles.length > 0) {
-        const fileNames = unsupportedFiles.map(f => f.file.name).join(', ');
-        setError(`La conversión de Word/Excel (${fileNames}) no está soportada todavía. Por favor, elimínelos para continuar.`);
-        return;
+      const fileNames = unsupportedFiles.map(f => f.file.name).join(', ');
+      setError(`La conversión de Word/Excel (${fileNames}) no está soportada todavía. Por favor, elimínelos para continuar.`);
+      return;
     }
 
     setIsMerging(true);
@@ -269,13 +330,13 @@ const App: React.FC = () => {
     try {
       const pdfFiles = files.filter(f => f.type === 'pdf');
       const blob = await createMergedPdfBlob(pdfFiles);
-      
+
       let finalName = mergedFileName.trim();
       if (!finalName) {
-          finalName = 'merged-document.pdf';
+        finalName = 'merged-document.pdf';
       }
       if (!finalName.toLowerCase().endsWith('.pdf')) {
-          finalName += '.pdf';
+        finalName += '.pdf';
       }
 
       if (saveMethod === 'saveAs' && canShowSavePicker) {
@@ -298,24 +359,25 @@ const App: React.FC = () => {
         document.body.removeChild(link);
         URL.revokeObjectURL(link.href);
       }
-      
+
       setFiles([]);
       setFileNameSourceId(null);
       setMergedFileName('merged-document.pdf');
     } catch (e: any) {
-        // Don't show an error if the user cancels the save dialog
-        if (e.name === 'AbortError') {
-          return;
-        }
-        console.error(e);
-        setError("Ocurrió un error al fusionar los archivos. Asegúrese de que no estén corruptos o protegidos.");
+      // Don't show an error if the user cancels the save dialog
+      if (e.name === 'AbortError') {
+        return;
+      }
+      console.error(e);
+      setError("Ocurrió un error al fusionar los archivos. Asegúrese de que no estén corruptos o protegidos.");
     } finally {
       setIsMerging(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center p-4 sm:p-6 lg:p-8 font-sans text-white">
+    <div className="min-h-screen flex flex-col items-center p-4 sm:p-6 lg:p-8 font-sans text-white relative">
+      <img src={logo} alt="Logo" className="absolute top-4 left-4 w-16 h-auto" />
       <div className="w-full max-w-3xl mx-auto">
         <header className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white">PDF Fusion</h1>
@@ -323,7 +385,7 @@ const App: React.FC = () => {
         </header>
 
         <main className="space-y-6">
-          <div 
+          <div
             className={`p-6 rounded-lg shadow-sm border-2 border-dashed transition-colors duration-300 ${isDragOver ? 'border-indigo-400 bg-white/10' : 'border-slate-500 bg-white/5'}`}
             onDragEnter={handleDragEvents}
             onDragLeave={handleDragEvents}
@@ -332,22 +394,22 @@ const App: React.FC = () => {
           >
             <div className="flex flex-col items-center justify-center text-center">
               {isProcessing ? (
-                  <LoaderIcon className="w-12 h-12 text-indigo-400 animate-spin mb-3" />
+                <LoaderIcon className="w-12 h-12 text-indigo-400 animate-spin mb-3" />
               ) : (
-                  <UploadIcon className="w-12 h-12 text-slate-400 mb-3" />
+                <UploadIcon className="w-12 h-12 text-slate-400 mb-3" />
               )}
               <label htmlFor="file-upload" className={`relative font-semibold py-2 px-4 rounded-md transition-colors ${isProcessing ? 'cursor-not-allowed bg-indigo-800 text-slate-300' : 'cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700'}`}>
                 <span>{isProcessing ? 'Procesando...' : 'Seleccionar archivos'}</span>
                 <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileChange} disabled={isProcessing} />
               </label>
               <p className="mt-2 text-sm text-slate-300">o arrastre y suelte los archivos aquí</p>
-               <p className="mt-1 text-xs text-slate-400">Formatos soportados: PDF, JPG, PNG</p>
+              <p className="mt-1 text-xs text-slate-400">Formatos soportados: PDF, JPG, PNG</p>
             </div>
           </div>
-          
+
           {error && (
             <div className="bg-red-500/20 border-l-4 border-red-400 text-red-200 p-4 rounded-md flex items-center">
-              <XCircleIcon className="h-5 w-5 mr-3"/>
+              <XCircleIcon className="h-5 w-5 mr-3" />
               <span>{error}</span>
             </div>
           )}
@@ -380,15 +442,15 @@ const App: React.FC = () => {
                     {appFile.type === 'excel' && <ExcelIcon className="w-6 h-6 text-green-400 mr-3 shrink-0" />}
                     <span className="flex-grow text-slate-100 text-sm truncate" title={appFile.file.name}>{appFile.file.name}</span>
                     <button
-                        onClick={() => handlePreview(appFile)}
-                        disabled={appFile.type !== 'pdf'}
-                        className="ml-4 p-1 rounded-full text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:text-slate-600 disabled:hover:text-slate-600 disabled:hover:bg-transparent"
-                        title={appFile.type === 'pdf' ? 'Previsualizar archivo' : 'La previsualización no está disponible'}
+                      onClick={() => handlePreview(appFile)}
+                      disabled={appFile.type !== 'pdf'}
+                      className="ml-4 p-1 rounded-full text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:text-slate-600 disabled:hover:text-slate-600 disabled:hover:bg-transparent"
+                      title={appFile.type === 'pdf' ? 'Previsualizar archivo' : 'La previsualización no está disponible'}
                     >
-                        <PreviewIcon className="w-5 h-5"/>
+                      <PreviewIcon className="w-5 h-5" />
                     </button>
                     <button onClick={() => removeFile(appFile.id)} className="ml-2 p-1 rounded-full text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors">
-                        <TrashIcon className="w-5 h-5" />
+                      <TrashIcon className="w-5 h-5" />
                     </button>
                   </li>
                 ))}
@@ -406,6 +468,19 @@ const App: React.FC = () => {
                   className="block w-full px-3 py-2 bg-black/20 border border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-slate-100 placeholder-slate-400"
                   placeholder="ej: mi-documento-fusionado.pdf"
                 />
+              </div>
+
+              <div className="mt-6 flex items-center">
+                <input
+                  id="compression-checkbox"
+                  type="checkbox"
+                  checked={isCompressionEnabled}
+                  onChange={(e) => setIsCompressionEnabled(e.target.checked)}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                />
+                <label htmlFor="compression-checkbox" className="ml-2 block text-sm text-slate-200">
+                  Comprimir imágenes (reduce el tamaño del archivo final)
+                </label>
               </div>
 
               <div className="mt-6 border-t border-slate-700 pt-6 flex flex-col sm:flex-row gap-4">
