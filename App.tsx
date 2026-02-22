@@ -1,7 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, degrees } from 'pdf-lib';
 import { PdfIcon, UploadIcon, DragHandleIcon, TrashIcon, XCircleIcon, LoaderIcon, WordIcon, ExcelIcon, PreviewIcon } from './components/Icons';
 import logo from './assets/logo.jpg';
+import { jsPDF } from 'jspdf';
+import * as mammoth from 'mammoth';
+import * as XLSX from 'xlsx';
+
+import { PageEditorModal, PageConfig } from './components/PageEditorModal';
 
 // File System Access API types for window
 declare global {
@@ -10,10 +15,11 @@ declare global {
   }
 }
 
-interface AppFile {
+export interface AppFile {
   id: string;
   file: File;
   type: 'pdf' | 'word' | 'excel';
+  pageConfig?: Record<number, PageConfig>;
 }
 
 interface PreviewModalProps {
@@ -69,6 +75,7 @@ const App: React.FC = () => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [fileNameSourceId, setFileNameSourceId] = useState<string | null>(null);
   const [previewFile, setPreviewFile] = useState<AppFile | null>(null);
+  const [editingPagesFile, setEditingPagesFile] = useState<AppFile | null>(null);
   const [isCompressionEnabled, setIsCompressionEnabled] = useState(true);
 
   const draggedItem = useRef<number | null>(null);
@@ -84,6 +91,25 @@ const App: React.FC = () => {
 
   const handleClosePreview = () => {
     setPreviewFile(null);
+  };
+
+  const handleEditPages = (fileToEdit: AppFile) => {
+    if (fileToEdit.type === 'pdf') {
+      setEditingPagesFile(fileToEdit);
+    }
+  };
+
+  const handleSavePageConfig = (config: Record<number, PageConfig>, _: number) => {
+    if (editingPagesFile) {
+      setFiles(prev => prev.map(f =>
+        f.id === editingPagesFile.id ? { ...f, pageConfig: config } : f
+      ));
+    }
+    setEditingPagesFile(null);
+  };
+
+  const handleClosePageEditor = () => {
+    setEditingPagesFile(null);
   };
 
   const compressImage = async (imageFile: File): Promise<File> => {
@@ -160,6 +186,72 @@ const App: React.FC = () => {
     return new File([pdfBytes as any], `${originalName}.pdf`, { type: 'application/pdf' });
   };
 
+  const convertOfficeToPdf = async (file: File, type: 'word' | 'excel'): Promise<File> => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        let htmlString = '';
+
+        if (type === 'word') {
+          const result = await mammoth.convertToHtml({ arrayBuffer });
+          htmlString = result.value;
+        } else if (type === 'excel') {
+          const workbook = XLSX.read(arrayBuffer, { type: 'buffer' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          htmlString = XLSX.utils.sheet_to_html(worksheet);
+        }
+
+        // Create a temporary container
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '-9999px';
+        container.style.width = '1000px';
+        container.style.backgroundColor = 'white';
+        container.style.color = 'black';
+        container.style.padding = '40px';
+        container.innerHTML = htmlString;
+
+        // Add some basic styling for excel tables to look decent
+        if (type === 'excel') {
+          const style = document.createElement('style');
+          style.innerHTML = `
+                        table { border-collapse: collapse; width: 100%; }
+                        td, th { border: 1px solid #ddd; padding: 8px; }
+                        tr:nth-child(even){background-color: #f2f2f2;}
+                    `;
+          container.appendChild(style);
+        }
+
+        document.body.appendChild(container);
+
+        const doc = new jsPDF({
+          orientation: 'portrait',
+          unit: 'px',
+          format: 'a4',
+        });
+
+        await doc.html(container, {
+          callback: function (doc) {
+            const pdfBlob = doc.output('blob');
+            const pdfFile = new File([pdfBlob], file.name.replace(/\.[^/.]+$/, ".pdf"), { type: 'application/pdf' });
+            document.body.removeChild(container);
+            resolve(pdfFile);
+          },
+          x: 10,
+          y: 10,
+          width: 430, // Default a4 width in px is ~446, leaving margins
+          windowWidth: 1000
+        });
+
+      } catch (e) {
+        console.error("Conversion error", e);
+        reject(e);
+      }
+    });
+  };
+
   const processAndAddFiles = async (filesToAdd: FileList) => {
     setIsProcessing(true);
     setError(null);
@@ -203,8 +295,10 @@ const App: React.FC = () => {
           fileToProcess = await convertImageToPdf(imageToConvert);
           fileType = 'pdf';
         } else if (file.type.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
+          fileToProcess = await convertOfficeToPdf(file, 'word');
           fileType = 'word';
         } else if (file.type.includes('excel') || file.type.includes('spreadsheet') || file.name.endsWith('.xls') || file.name.endsWith('.xlsx')) {
+          fileToProcess = await convertOfficeToPdf(file, 'excel');
           fileType = 'excel';
         } else {
           fileType = 'pdf';
@@ -297,12 +391,23 @@ const App: React.FC = () => {
       const arrayBuffer = await appFile.file.arrayBuffer();
       const pdf = await PDFDocument.load(arrayBuffer);
       const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-      copiedPages.forEach((page) => {
+
+      copiedPages.forEach((page, index) => {
+        // Apply page configuration if available
+        if (appFile.pageConfig && appFile.pageConfig[index]) {
+          const config = appFile.pageConfig[index];
+          if (!config.selected) return; // Skip excluded pages
+
+          if (config.rotation) {
+            const currentRotation = page.getRotation().angle;
+            page.setRotation(degrees(currentRotation + config.rotation));
+          }
+        }
         mergedPdf.addPage(page);
       });
     }
 
-    const mergedPdfBytes = await mergedPdf.save();
+    const mergedPdfBytes = await mergedPdf.save({ useObjectStreams: isCompressionEnabled });
     // TypeScript casting fix for build error
     return new Blob([mergedPdfBytes as any], { type: 'application/pdf' });
   };
@@ -312,23 +417,19 @@ const App: React.FC = () => {
       setError("Por favor, seleccione al menos un archivo para crear un PDF.");
       return;
     }
-    if (files.length < 2 && files.every(f => f.type === 'pdf')) {
-      setError("Por favor, seleccione al menos dos archivos PDF para fusionar.");
-      return;
-    }
-
-    const unsupportedFiles = files.filter(f => f.type === 'word' || f.type === 'excel');
-    if (unsupportedFiles.length > 0) {
-      const fileNames = unsupportedFiles.map(f => f.file.name).join(', ');
-      setError(`La conversión de Word/Excel (${fileNames}) no está soportada todavía. Por favor, elimínelos para continuar.`);
-      return;
+    // Now that all files are internally converted to PDFs (even if icon says word/excel), 
+    // we can merge as long as there's at least one file.
+    if (files.length < 2) {
+      // We can actually just download the single converted file, 
+      // but maybe log a warning. For now let's allow single file to act as a converter.
     }
 
     setIsMerging(true);
     setError(null);
 
     try {
-      const pdfFiles = files.filter(f => f.type === 'pdf');
+      // Treat all files as PDFs because processAndAddFiles converts them all
+      const pdfFiles = files;
       const blob = await createMergedPdfBlob(pdfFiles);
 
       let finalName = mergedFileName.trim();
@@ -442,10 +543,18 @@ const App: React.FC = () => {
                     {appFile.type === 'excel' && <ExcelIcon className="w-6 h-6 text-green-400 mr-3 shrink-0" />}
                     <span className="flex-grow text-slate-100 text-sm truncate" title={appFile.file.name}>{appFile.file.name}</span>
                     <button
+                      onClick={() => handleEditPages(appFile)}
+                      disabled={appFile.type !== 'pdf'}
+                      className="ml-2 p-1 rounded text-xs font-medium bg-black/30 text-indigo-300 hover:text-white hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={appFile.type === 'pdf' ? 'Editar páginas (Seleccionar/Rotar)' : 'La edición de páginas no está disponible para este formato'}
+                    >
+                      Páginas
+                    </button>
+                    <button
                       onClick={() => handlePreview(appFile)}
                       disabled={appFile.type !== 'pdf'}
-                      className="ml-4 p-1 rounded-full text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:text-slate-600 disabled:hover:text-slate-600 disabled:hover:bg-transparent"
-                      title={appFile.type === 'pdf' ? 'Previsualizar archivo' : 'La previsualización no está disponible'}
+                      className="ml-2 p-1 rounded-full text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:text-slate-600 disabled:hover:text-slate-600 disabled:hover:bg-transparent"
+                      title={appFile.type === 'pdf' ? 'Previsualizar archivo completob' : 'La previsualización no está disponible'}
                     >
                       <PreviewIcon className="w-5 h-5" />
                     </button>
@@ -519,6 +628,7 @@ const App: React.FC = () => {
           )}
         </main>
         {previewFile && <PreviewModal file={previewFile} onClose={handleClosePreview} />}
+        {editingPagesFile && <PageEditorModal file={editingPagesFile} onClose={handleClosePageEditor} onSave={handleSavePageConfig} />}
       </div>
     </div>
   );
