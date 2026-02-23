@@ -3,6 +3,7 @@ import { UploadIcon, TrashIcon, PdfIcon, XCircleIcon, LoaderIcon } from './Icons
 import { PDFDocument } from 'pdf-lib';
 import JSZip from 'jszip';
 import * as pdfjsLib from 'pdfjs-dist';
+import { LiquidButton } from '@/components/ui/liquid-glass-button';
 
 // Set worker route from CDN
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
@@ -516,10 +517,10 @@ export const SignMode: React.FC = () => {
             </div>
 
             {/* Action Bar */}
-            <div className="bg-black/20 p-4 border border-slate-700/50 rounded-lg flex justify-end">
-                <button
+            <div className="bg-black/20 p-4 border border-slate-700/50 rounded-lg flex justify-end mt-6">
+                <LiquidButton
                     disabled={pdfs.length === 0 || !signatureImage || isSigning}
-                    className="flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0F4C81] focus:ring-green-500 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white disabled:text-slate-400 disabled:cursor-not-allowed"
                     onClick={handleSign}
                 >
                     {isSigning ? (
@@ -527,7 +528,7 @@ export const SignMode: React.FC = () => {
                     ) : (
                         `Firmar ${pdfs.length > 0 ? `${pdfs.length} Documentos` : 'Documentos'}`
                     )}
-                </button>
+                </LiquidButton>
             </div>
         </div>
     );

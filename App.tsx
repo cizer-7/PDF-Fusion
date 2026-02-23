@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { MergeMode } from './components/MergeMode';
-import logo from './assets/logo.jpg';
 import { SignMode } from './components/SignMode';
 import { CompressMode } from './components/CompressMode';
+import { LiquidButton } from '@/components/ui/liquid-glass-button';
+import logo from './assets/logo.jpg';
 
 function App() {
     const [activeTab, setActiveTab] = useState<'merge' | 'sign' | 'compress'>('merge');
@@ -24,8 +25,8 @@ function App() {
 
                 {/* Tab Navigation */}
                 <div className="flex justify-center mb-8">
-                    <div className="bg-black/30 p-1 rounded-lg inline-flex">
-                        <button
+                    <div className="bg-black/30 p-1 rounded-lg inline-flex gap-2">
+                        <LiquidButton
                             onClick={() => setActiveTab('merge')}
                             className={`px-6 py-2 rounded-md font-medium text-sm transition-colors ${activeTab === 'merge'
                                 ? 'bg-indigo-600 text-white shadow'
@@ -33,8 +34,8 @@ function App() {
                                 }`}
                         >
                             Fusionar PDFs
-                        </button>
-                        <button
+                        </LiquidButton>
+                        <LiquidButton
                             onClick={() => setActiveTab('sign')}
                             className={`px-6 py-2 rounded-md font-medium text-sm transition-colors ${activeTab === 'sign'
                                 ? 'bg-indigo-600 text-white shadow'
@@ -42,8 +43,8 @@ function App() {
                                 }`}
                         >
                             Firma Múltiple
-                        </button>
-                        <button
+                        </LiquidButton>
+                        <LiquidButton
                             onClick={() => setActiveTab('compress')}
                             className={`px-6 py-2 rounded-md font-medium text-sm transition-colors ${activeTab === 'compress'
                                 ? 'bg-indigo-600 text-white shadow'
@@ -51,7 +52,7 @@ function App() {
                                 }`}
                         >
                             Comprimir PDF
-                        </button>
+                        </LiquidButton>
                     </div>
                 </div>
 

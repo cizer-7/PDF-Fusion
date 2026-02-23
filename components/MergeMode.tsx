@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { PDFDocument, degrees } from 'pdf-lib';
 import { PdfIcon, UploadIcon, DragHandleIcon, TrashIcon, XCircleIcon, LoaderIcon, WordIcon, ExcelIcon, PreviewIcon } from './Icons';
+import { LiquidButton } from '@/components/ui/liquid-glass-button';
 import { jsPDF } from 'jspdf';
 import * as mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
@@ -587,10 +588,10 @@ export const MergeMode: React.FC = () => {
 
               <div className="mt-6 border-t border-slate-700 pt-6 flex flex-col sm:flex-row gap-4">
                 {canShowSavePicker && (
-                  <button
+                  <LiquidButton
                     onClick={() => runMergeProcess('saveAs')}
                     disabled={isMerging}
-                    className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0F4C81] focus:ring-indigo-500 disabled:bg-indigo-800 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
+                    className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white disabled:text-slate-300 disabled:cursor-not-allowed"
                   >
                     {isMerging ? (
                       <>
@@ -600,12 +601,12 @@ export const MergeMode: React.FC = () => {
                     ) : (
                       'Fusionar y guardar en...'
                     )}
-                  </button>
+                  </LiquidButton>
                 )}
-                <button
+                <LiquidButton
                   onClick={() => runMergeProcess('download')}
                   disabled={isMerging}
-                  className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md shadow-sm transition-colors text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0F4C81] focus:ring-green-500 disabled:bg-green-900 disabled:text-slate-400 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white disabled:text-slate-400 disabled:cursor-not-allowed"
                 >
                   {isMerging ? (
                     <>
@@ -615,7 +616,7 @@ export const MergeMode: React.FC = () => {
                   ) : (
                     'Fusionar y Descargar'
                   )}
-                </button>
+                </LiquidButton>
               </div>
             </div>
           )}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { UploadIcon, LoaderIcon, XCircleIcon, PdfIcon, TrashIcon } from './Icons';
+import { LiquidButton } from '@/components/ui/liquid-glass-button';
 
 export interface CompressFile {
     id: string;
@@ -142,25 +143,25 @@ export const CompressMode: React.FC = () => {
 
                             <div className="mt-6 border-t border-slate-700 pt-6 flex flex-col sm:flex-row gap-4">
                                 {canShowSavePicker && (
-                                    <button
+                                    <LiquidButton
                                         onClick={() => runCompressProcess('saveAs')}
                                         disabled={isProcessing}
-                                        className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0F4C81] focus:ring-indigo-500 disabled:bg-indigo-800 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
+                                        className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white disabled:text-slate-300 disabled:cursor-not-allowed"
                                     >
                                         {isProcessing ? (
                                             <><LoaderIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />Comprimiendo...</>
                                         ) : 'Comprimir y guardar en...'}
-                                    </button>
+                                    </LiquidButton>
                                 )}
-                                <button
+                                <LiquidButton
                                     onClick={() => runCompressProcess('download')}
                                     disabled={isProcessing}
-                                    className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md shadow-sm transition-colors text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0F4C81] focus:ring-green-500 disabled:bg-green-900 disabled:text-slate-400 disabled:cursor-not-allowed"
+                                    className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white disabled:text-slate-400 disabled:cursor-not-allowed"
                                 >
                                     {isProcessing ? (
                                         <><LoaderIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />Comprimiendo...</>
                                     ) : 'Comprimir y Descargar'}
-                                </button>
+                                </LiquidButton>
                             </div>
                         </div>
                     )}
