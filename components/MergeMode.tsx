@@ -587,22 +587,7 @@ export const MergeMode: React.FC = () => {
               </div>
 
               <div className="mt-6 border-t border-slate-700 pt-6 flex flex-col sm:flex-row gap-4">
-                {canShowSavePicker && (
-                  <LiquidButton
-                    onClick={() => runMergeProcess('saveAs')}
-                    disabled={isMerging}
-                    className="w-full flex items-center justify-center px-4 py-3 text-base font-medium rounded-full text-white disabled:text-slate-300 disabled:cursor-not-allowed"
-                  >
-                    {isMerging ? (
-                      <>
-                        <LoaderIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
-                        Guardando...
-                      </>
-                    ) : (
-                      'Fusionar y guardar en...'
-                    )}
-                  </LiquidButton>
-                )}
+
                 <LiquidButton
                   onClick={() => runMergeProcess('download')}
                   disabled={isMerging}
