@@ -520,7 +520,7 @@ export const SignMode: React.FC = () => {
             <div className="bg-black/20 p-4 border border-slate-700/50 rounded-lg flex justify-end mt-6">
                 <LiquidButton
                     disabled={pdfs.length === 0 || !signatureImage || isSigning}
-                    className="flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full text-white disabled:text-slate-400 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center px-6 py-3 text-base font-medium rounded-full text-white disabled:text-slate-400 disabled:cursor-not-allowed"
                     onClick={handleSign}
                 >
                     {isSigning ? (

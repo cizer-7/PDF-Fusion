@@ -591,7 +591,7 @@ export const MergeMode: React.FC = () => {
                   <LiquidButton
                     onClick={() => runMergeProcess('saveAs')}
                     disabled={isMerging}
-                    className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-full text-white disabled:text-slate-300 disabled:cursor-not-allowed"
+                    className="w-full flex items-center justify-center px-4 py-3 text-base font-medium rounded-full text-white disabled:text-slate-300 disabled:cursor-not-allowed"
                   >
                     {isMerging ? (
                       <>
@@ -606,7 +606,7 @@ export const MergeMode: React.FC = () => {
                 <LiquidButton
                   onClick={() => runMergeProcess('download')}
                   disabled={isMerging}
-                  className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-full text-white disabled:text-slate-400 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center px-4 py-3 text-base font-medium rounded-full text-white disabled:text-slate-400 disabled:cursor-not-allowed"
                 >
                   {isMerging ? (
                     <>

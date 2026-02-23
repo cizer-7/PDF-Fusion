@@ -9,7 +9,7 @@ function App() {
     const [activeTab, setActiveTab] = useState<'merge' | 'sign' | 'compress'>('merge');
 
     return (
-        <div className="min-h-screen flex flex-col font-sans text-white relative bg-slate-900">
+        <div className="min-h-screen flex flex-col font-sans text-white relative transition-colors duration-500 bg-[#004986]">
             {/* Header and Logo shared across tabs */}
             <div className="absolute top-4 left-4 flex items-center gap-3">
                 <img src={logo} alt="Logo" className="w-16 h-auto" />
@@ -25,30 +25,30 @@ function App() {
 
                 {/* Tab Navigation */}
                 <div className="flex justify-center mb-8">
-                    <div className="bg-black/30 p-1 rounded-lg inline-flex gap-2">
+                    <div className="bg-black/20 p-1.5 rounded-full inline-flex gap-2 shadow-inner border border-white/10">
                         <LiquidButton
                             onClick={() => setActiveTab('merge')}
-                            className={`px-6 py-2 rounded-full font-medium text-sm transition-colors ${activeTab === 'merge'
-                                ? 'bg-indigo-600 text-white shadow'
-                                : 'text-slate-400 hover:text-white hover:bg-black/20'
+                            className={`px-6 py-2 rounded-full font-medium text-sm transition-all duration-300 ${activeTab === 'merge'
+                                ? 'bg-white/20 text-white shadow-lg shadow-white/10 ring-1 ring-white/20'
+                                : 'text-slate-200 hover:text-white hover:bg-white/10'
                                 }`}
                         >
                             Fusionar PDFs
                         </LiquidButton>
                         <LiquidButton
                             onClick={() => setActiveTab('sign')}
-                            className={`px-6 py-2 rounded-full font-medium text-sm transition-colors ${activeTab === 'sign'
-                                ? 'bg-indigo-600 text-white shadow'
-                                : 'text-slate-400 hover:text-white hover:bg-black/20'
+                            className={`px-6 py-2 rounded-full font-medium text-sm transition-all duration-300 ${activeTab === 'sign'
+                                ? 'bg-white/20 text-white shadow-lg shadow-white/10 ring-1 ring-white/20'
+                                : 'text-slate-200 hover:text-white hover:bg-white/10'
                                 }`}
                         >
                             Firma Múltiple
                         </LiquidButton>
                         <LiquidButton
                             onClick={() => setActiveTab('compress')}
-                            className={`px-6 py-2 rounded-full font-medium text-sm transition-colors ${activeTab === 'compress'
-                                ? 'bg-indigo-600 text-white shadow'
-                                : 'text-slate-400 hover:text-white hover:bg-black/20'
+                            className={`px-6 py-2 rounded-full font-medium text-sm transition-all duration-300 ${activeTab === 'compress'
+                                ? 'bg-white/20 text-white shadow-lg shadow-white/10 ring-1 ring-white/20'
+                                : 'text-slate-200 hover:text-white hover:bg-white/10'
                                 }`}
                         >
                             Comprimir PDF
