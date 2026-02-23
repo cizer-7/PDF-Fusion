@@ -28,7 +28,7 @@ function App() {
                     <div className="bg-black/30 p-1 rounded-lg inline-flex gap-2">
                         <LiquidButton
                             onClick={() => setActiveTab('merge')}
-                            className={`px-6 py-2 rounded-md font-medium text-sm transition-colors ${activeTab === 'merge'
+                            className={`px-6 py-2 rounded-full font-medium text-sm transition-colors ${activeTab === 'merge'
                                 ? 'bg-indigo-600 text-white shadow'
                                 : 'text-slate-400 hover:text-white hover:bg-black/20'
                                 }`}
@@ -37,7 +37,7 @@ function App() {
                         </LiquidButton>
                         <LiquidButton
                             onClick={() => setActiveTab('sign')}
-                            className={`px-6 py-2 rounded-md font-medium text-sm transition-colors ${activeTab === 'sign'
+                            className={`px-6 py-2 rounded-full font-medium text-sm transition-colors ${activeTab === 'sign'
                                 ? 'bg-indigo-600 text-white shadow'
                                 : 'text-slate-400 hover:text-white hover:bg-black/20'
                                 }`}
@@ -46,7 +46,7 @@ function App() {
                         </LiquidButton>
                         <LiquidButton
                             onClick={() => setActiveTab('compress')}
-                            className={`px-6 py-2 rounded-md font-medium text-sm transition-colors ${activeTab === 'compress'
+                            className={`px-6 py-2 rounded-full font-medium text-sm transition-colors ${activeTab === 'compress'
                                 ? 'bg-indigo-600 text-white shadow'
                                 : 'text-slate-400 hover:text-white hover:bg-black/20'
                                 }`}

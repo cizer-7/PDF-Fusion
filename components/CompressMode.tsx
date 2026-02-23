@@ -146,7 +146,7 @@ export const CompressMode: React.FC = () => {
                                     <LiquidButton
                                         onClick={() => runCompressProcess('saveAs')}
                                         disabled={isProcessing}
-                                        className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white disabled:text-slate-300 disabled:cursor-not-allowed"
+                                        className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-full text-white disabled:text-slate-300 disabled:cursor-not-allowed"
                                     >
                                         {isProcessing ? (
                                             <><LoaderIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />Comprimiendo...</>
@@ -156,7 +156,7 @@ export const CompressMode: React.FC = () => {
                                 <LiquidButton
                                     onClick={() => runCompressProcess('download')}
                                     disabled={isProcessing}
-                                    className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white disabled:text-slate-400 disabled:cursor-not-allowed"
+                                    className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-full text-white disabled:text-slate-400 disabled:cursor-not-allowed"
                                 >
                                     {isProcessing ? (
                                         <><LoaderIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />Comprimiendo...</>
