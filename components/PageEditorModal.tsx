@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { XCircleIcon, LoaderIcon } from './Icons';
-import { AppFile } from '../App';
+import { AppFile } from './MergeMode';
 
 // Set worker route from CDN
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
