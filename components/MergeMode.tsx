@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { PDFDocument, degrees } from 'pdf-lib';
 import { PdfIcon, UploadIcon, DragHandleIcon, TrashIcon, XCircleIcon, LoaderIcon, WordIcon, ExcelIcon, PreviewIcon } from './Icons';
-import logo from '../assets/logo.jpg';
 import { jsPDF } from 'jspdf';
 import * as mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
@@ -477,14 +476,8 @@ export const MergeMode: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center p-4 sm:p-6 lg:p-8 font-sans text-white relative">
-      <img src={logo} alt="Logo" className="absolute top-4 left-4 w-16 h-auto" />
-      <div className="w-full max-w-3xl mx-auto">
-        <header className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white">PDF Fusion</h1>
-          <p className="text-slate-300 mt-2">Fusione sus archivos PDF, JPG y PNG de forma rápida y sencilla.</p>
-        </header>
-
+    <div className="w-full font-sans text-white relative">
+      <div className="w-full mx-auto">
         <main className="space-y-6">
           <div
             className={`p-6 rounded-lg shadow-sm border-2 border-dashed transition-colors duration-300 ${isDragOver ? 'border-indigo-400 bg-white/10' : 'border-slate-500 bg-white/5'}`}

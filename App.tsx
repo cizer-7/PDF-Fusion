@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { MergeMode } from './components/MergeMode';
 import logo from './assets/logo.jpg';
 import { SignMode } from './components/SignMode';
+import { CompressMode } from './components/CompressMode';
 
 function App() {
-    const [activeTab, setActiveTab] = useState<'merge' | 'sign'>('merge');
+    const [activeTab, setActiveTab] = useState<'merge' | 'sign' | 'compress'>('merge');
 
     return (
         <div className="min-h-screen flex flex-col font-sans text-white relative bg-slate-900">
@@ -42,15 +43,22 @@ function App() {
                         >
                             Firma Múltiple
                         </button>
+                        <button
+                            onClick={() => setActiveTab('compress')}
+                            className={`px-6 py-2 rounded-md font-medium text-sm transition-colors ${activeTab === 'compress'
+                                ? 'bg-indigo-600 text-white shadow'
+                                : 'text-slate-400 hover:text-white hover:bg-black/20'
+                                }`}
+                        >
+                            Comprimir PDF
+                        </button>
                     </div>
                 </div>
 
                 {/* Tab Content */}
-                {activeTab === 'merge' ? (
-                    <MergeMode />
-                ) : (
-                    <SignMode />
-                )}
+                {activeTab === 'merge' && <MergeMode />}
+                {activeTab === 'sign' && <SignMode />}
+                {activeTab === 'compress' && <CompressMode />}
             </div>
         </div>
     );
